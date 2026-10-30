@@ -11,19 +11,15 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 *{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.4 Inter,system-ui,sans-serif;min-height:100vh}
 main{max-width:980px;margin:0 auto;padding:18px 14px 40px}
-h1{font:400 clamp(42px,9vw,72px)/.9 Anton,Impact,sans-serif;letter-spacing:.02em;margin:0;text-transform:uppercase;display:inline-block}
+h1{font:400 clamp(42px,9vw,72px)/.9 Anton,Impact,sans-serif;letter-spacing:.02em;margin:0;text-transform:uppercase}
 h1 span{color:var(--acc)}
 .sub{color:var(--mut);margin:6px 0 16px}
 .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .tabs{display:flex;border:2px solid var(--line)}
 .tabs button{border:0;background:none;color:var(--fg);font:800 13px Inter;letter-spacing:.08em;text-transform:uppercase;padding:10px 16px;cursor:pointer}
 .tabs button[aria-pressed=true]{background:var(--fg);color:var(--bg)}
-.in{display:flex;gap:8px;flex:1;min-width:260px;position:relative}
-.search-wrap{flex:1;position:relative;display:flex}
+.in{display:flex;gap:8px;flex:1;min-width:260px}
 input{flex:1;min-width:0;border:2px solid var(--line);background:var(--card);color:var(--fg);font:600 15px Inter;padding:10px 12px;border-radius:0}
-.dropdown-list{position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;background:var(--card);border:2px solid var(--line);border-top:none;z-index:100;display:none}
-.dropdown-item{padding:10px 12px;cursor:pointer;font-weight:600;font-size:14px;border-bottom:1px solid var(--line)}
-.dropdown-item:hover,.dropdown-item.selected{background:var(--acc);color:#111}
 .btn{border:2px solid var(--line);background:var(--acc);color:#111;font:800 13px Inter;letter-spacing:.08em;text-transform:uppercase;padding:10px 16px;cursor:pointer}
 .btn.alt{background:var(--card);color:var(--fg)}
 .btn:disabled,input:disabled{opacity:.45;cursor:not-allowed}
@@ -46,14 +42,9 @@ input{flex:1;min-width:0;border:2px solid var(--line);background:var(--card);col
 <p class="sub">Guess the Bleach character. Every guess reveals how close you are.</p>
 <div class="bar">
  <div class="tabs"><button id="td" aria-pressed="true">Daily</button><button id="te" aria-pressed="false">Endless</button></div>
- <div class="in">
-  <div class="search-wrap">
-   <input id="q" placeholder="Pick or type a character…" autocomplete="off">
-   <div class="dropdown-list" id="dl"></div>
-  </div>
-  <button class="btn" id="go">Guess</button>
- </div>
+ <div class="in"><input id="q" list="dl" placeholder="Pick or type a character…" autocomplete="off"><button class="btn" id="go">Guess</button></div>
 </div>
+<datalist id="dl"></datalist>
 <div class="msg" id="msg"></div>
 <div class="win" id="win"><h2 id="wt"></h2><div id="wd"></div><button class="btn" id="sh">Copy result</button><button class="btn alt" id="nx">New character</button></div>
 <div class="wrap"><div class="grid" id="g"></div></div>
@@ -64,7 +55,7 @@ const D=[["Ichigo Kurosaki","Male","Human","15-17",16.0,181,"Orange","Karakura T
 const ARCS=["Agent of the Shinigami","Soul Society: Sneak Entry","Soul Society: Rescue","Arrancar: Arrival","Hueco Mundo: Infiltration","Arrancar: Fake Karakura Town","Turn Back the Pendulum","Lost Substitute Shinigami","Thousand-Year Blood War: The Blood Warfare","Everything But the Rain","Thousand-Year Blood War: The Separation","Thousand-Year Blood War: The Conflict","Thousand-Year Blood War: The Calamity","Manga Finale (Ch. 686)","CFYOW Novel","No Breaths From Hell"];
 const COLS=["Character","Gender","Race","Age","Height","Hair","Location","First Arc"];
 const $=id=>document.getElementById(id);
-let mode="daily",target=null,guesses=[],done=false,selectedIdx=-1;
+let mode="daily",target=null,guesses=[],done=false;
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 
 function getDailyTarget(){
@@ -104,7 +95,7 @@ function render(animate){
  [...guesses].reverse().forEach((n,ri)=>{const gr=D.find(d=>d[0]===n);
   row(gr,target).forEach((c,i)=>{const e=document.createElement("div");e.className="c "+c[0];e.style.setProperty("--i",animate&&ri===0?i:0);e.innerHTML=c[1];g.appendChild(e)})});
  
- updateDropdown();
+ const dl=$("dl");dl.innerHTML=D.map(d=>d[0]).filter(n=>!guesses.includes(n)).sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${n.replace(/"/g,"&quot;")}">`).join("");
  $("q").disabled=$("go").disabled=done;
  $("nx").style.display=mode==="endless"?"inline-block":"none";
  const w=$("win");w.style.display=done?"block":"none";
@@ -112,30 +103,10 @@ function render(animate){
   $("wd").textContent=won?`Solved in ${guesses.length} ${guesses.length===1?"guess":"guesses"}.`:"";}
 }
 
-function updateDropdown(){
- const qVal = $("q").value.trim().toLowerCase();
- const list=$("dl");
- const matches = D.filter(d => !guesses.includes(d[0]) && d[0].toLowerCase().includes(qVal)).sort((a,b)=>a[0].localeCompare(b[0]));
- 
- if(matches.length === 0 || (matches.length === 1 && matches[0][0].toLowerCase() === qVal)){
-  list.style.display="none";
-  return;
- }
- 
- list.innerHTML = matches.map((d, idx)=>`<div class="dropdown-item" data-name="${d[0].replace(/"/g,"&quot;")}">${d[0]}</div>`).join("");
- list.style.display="block";
- selectedIdx = -1;
-}
-
-function selectCharacter(name){
- $("q").value = name;
- $("dl").style.display="none";
-}
-
 function save(){if(mode==="daily")store.set("bleachdle-"+today(),{g:guesses,d:done})}
 
 function start(m,fresh){
- mode=m;$("td").setAttribute("aria-pressed",m==="daily");$("te").setAttribute("aria-pressed",m==="endless");$("msg").textContent="";$("q").value="";$("dl").style.display="none";
+ mode=m;$("td").setAttribute("aria-pressed",m==="daily");$("te").setAttribute("aria-pressed",m==="endless");$("msg").textContent="";$("q").value="";
  if(m==="daily"){target=getDailyTarget();const s=store.get("bleachdle-"+today())||{g:[],d:false};guesses=s.g;done=s.d;
   $("msg").textContent="A new daily character appears at midnight (your local time)."}
  else{target=D[Math.floor(Math.random()*D.length)];guesses=[];done=false}
@@ -144,43 +115,16 @@ function start(m,fresh){
 
 function guess(){
  if(done)return;const v=$("q").value.trim().toLowerCase();if(!v)return;
- let m=D.filter(d=>d[0].toLowerCase()===v);if(!m.length)m=D.filter(d=>d[0].toLowerCase().includes(v));
- if(m.length!==1){$("msg").textContent=m.length>1?"Be more specific — several characters match.":"No character by that name. Pick one from the list.";return}
+ let m=D.filter(d=>d[0].toLowerCase()===v);if(!m.length)m=D.filter(d=>d[0].toLowerCase().startsWith(v));
+ if(m.length!==1){$("msg").textContent=m.length?"Be more specific — several characters match.":"No character by that name. Pick one from the list.";return}
  const n=m[0][0];if(guesses.includes(n)){$("msg").textContent="Already guessed.";return}
- guesses.push(n);$("msg").textContent="";$("q").value="";$("dl").style.display="none";
+ guesses.push(n);$("msg").textContent="";$("q").value="";
  if(n===target[0])done=true;save();render(true);
  if(done)setTimeout(()=>$("win").scrollIntoView({behavior:"smooth",block:"nearest"}),1900);
 }
 
 $("go").onclick=guess;
-
-$("q").addEventListener("input",()=>updateDropdown());
-$("q").addEventListener("focus",()=>updateDropdown());
-$("q").addEventListener("keydown",e=>{
- const list=$("dl");
- const items=list.querySelectorAll(".dropdown-item");
- if(e.key==="ArrowDown"){
-  e.preventDefault();
-  if(items.length){selectedIdx=(selectedIdx+1)%items.length;items.forEach((it,i)=>it.classList.toggle("selected",i===selectedIdx));}
- }else if(e.key==="ArrowUp"){
-  e.preventDefault();
-  if(items.length){selectedIdx=(selectedIdx-1+items.length)%items.length;items.forEach((it,i)=>it.classList.toggle("selected",i===selectedIdx));}
- }else if(e.key==="Enter"){
-  e.preventDefault();
-  if(selectedIdx>=0 && items[selectedIdx]){selectCharacter(items[selectedIdx].getAttribute("data-name"));}
-  guess();
- }
-});
-
-document.addEventListener("click",e=>{
- if(!e.target.closest(".in")) $("dl").style.display="none";
-});
-
-$("dl").addEventListener("click",e=>{
- const item=e.target.closest(".dropdown-item");
- if(item){selectCharacter(item.getAttribute("data-name"));$("q").focus();}
-});
-
+$("q").addEventListener("keydown",e=>{if(e.key==="Enter")guess()});
 $("td").onclick=()=>start("daily");$("te").onclick=()=>start("endless");$("nx").onclick=()=>start("endless");
 
 $("sh").onclick=()=>{
