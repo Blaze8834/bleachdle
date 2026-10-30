@@ -111,19 +111,32 @@ function parseNum(val) {
   return match ? parseInt(match[0], 10) : null;
 }
 
-function row(g,t){
-  const gSquadNum = parseNum(g[7]);
-  const tSquadNum = parseNum(t[7]);
+function squadNum(g,t){
+  if(g===t)return["ok",g];
+  
+  const gNum = parseNum(g);
+  const tNum = parseNum(t);
 
-  let squadCell;
-  if(g[7]===t[7]){
-    squadCell=["ok",g[7]];
-  }else if(gSquadNum!==null && tSquadNum!==null){
-    squadCell=["bad",g[7]+` <b>${tSquadNum>gSquadNum?"↑":"↓"}</b>`];
-  }else{
-    squadCell=["bad",g[7]];
+  // If both have numbers (Squads or Espada numbers)
+  if(gNum!==null && tNum!==null){
+    const diff = Math.abs(tNum - gNum);
+    const status = diff <= 2 ? "part" : "bad";
+    return [status, g + ` <b>${tNum > gNum ? "↑" : "↓"}</b>`];
   }
 
+  // If Schrifts (Single letters A-Z)
+  if(g.length===1 && t.length===1 && /[A-Z]/.test(g) && /[A-Z]/.test(t)){
+    const gCode = g.charCodeAt(0);
+    const tCode = t.charCodeAt(0);
+    const diff = Math.abs(tCode - gCode);
+    const status = diff <= 2 ? "part" : "bad";
+    return [status, g + ` <b>${tCode > gCode ? "↑" : "↓"}</b>`];
+  }
+
+  return ["bad", g];
+}
+
+function row(g,t){
   return [
     ["nm",g[0]],
     [g[1]===t[1]?"ok":"bad",g[1]],
@@ -131,7 +144,7 @@ function row(g,t){
     num(g[4],t[4],g[3]),
     heightNum(g[5],t[5]),
     [g[6]===t[6]?"ok":"bad",g[6]],
-    squadCell,
+    squadNum(g[7],t[7]),
     arcNum(g[8],t[8])
   ];
 }
